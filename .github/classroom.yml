@@ -1,0 +1,87 @@
+name: Autograding Tests
+'on':
+- push
+- repository_dispatch
+
+permissions:
+  checks: write
+  actions: read
+  contents: read
+
+jobs:
+  run-autograding-tests:
+    runs-on: ubuntu-latest
+    if: github.actor != 'github-classroom[bot]'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: t01-basic
+      id: t01-basic
+      uses: classroom-resources/autograding-io-grader@v1
+      with:
+        test-name: t01-basic
+        setup-command: make compile
+        command: make -s test_01
+        input: |
+          receive#B001#Keyboard#10#150000
+          receive#B002#Mouse#5#50000
+          report
+          ---
+        expected-output: |
+          B001|Keyboard|10|150000.0
+          B002|Mouse|5|50000.0
+        comparison-method: exact
+        timeout: 2
+        max-score: 20
+
+    - name: t02-stock-update
+      id: t02-stock-update
+      uses: classroom-resources/autograding-io-grader@v1
+      with:
+        test-name: t02-stock-update
+        setup-command: make compile
+        command: make -s test_02
+        input: |
+          receive#B001#Keyboard#10#150000
+          ship#B001#3
+          restock#B001#5
+          report
+          ---
+        expected-output: |
+          B001|Keyboard|12|150000.0
+        comparison-method: exact
+        timeout: 2
+        max-score: 30
+
+    - name: t03-audit
+      id: t03-audit
+      uses: classroom-resources/autograding-io-grader@v1
+      with:
+        test-name: t03-audit
+        setup-command: make compile
+        command: make -s test_03
+        input: |
+          receive#B001#Keyboard#10#150000
+          restock#B001#5
+          ship#B001#3
+          audit#B001
+          ---
+        expected-output: |
+          B001|Keyboard|12|150000.0
+          1|receive|10
+          2|restock|5
+          3|ship|3
+        comparison-method: exact
+        timeout: 2
+        max-score: 50
+
+    - name: Autograding Reporter
+      uses: classroom-resources/autograding-grading-reporter@v1
+      env:
+        T01_RESULTS: "${{steps.t01-basic.outputs.result}}"
+        T02_RESULTS: "${{steps.t02-stock-update.outputs.result}}"
+        T03_RESULTS: "${{steps.t03-audit.outputs.result}}"
+      with:
+        runners: t01-basic,t02-stock-update,t03-audit
